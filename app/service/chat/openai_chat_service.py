@@ -250,6 +250,8 @@ def _build_payload(
     return payload
 
 
+from app.service.router.llm_router_service import get_router_service
+
 class OpenAIChatService:
     """聊天服务"""
 
@@ -285,9 +287,15 @@ class OpenAIChatService:
         api_key: str,
     ) -> Union[Dict[str, Any], AsyncGenerator[str, None]]:
         """创建聊天完成"""
-        messages, instruction = self.message_converter.convert(
-            request.messages, request.model
-        )
+
+        if request.model.lower() == "auto":
+            # Get the router service instance
+            router_service = await get_router_service(self.key_manager)
+            selected_model = await router_service.select_worker_model(request)
+            logger.info(f"AUTO model selected. Dynamically routing to: {selected_model}")
+            request.model = selected_model
+        
+        messages, instruction = self.message_converter.convert(request.messages)
 
         payload = _build_payload(request, messages, instruction)
 

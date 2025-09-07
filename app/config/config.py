@@ -94,7 +94,6 @@ class Settings(BaseSettings):
     UPLOAD_PROVIDER: str = "smms"
     SMMS_SECRET_TOKEN: str = ""
     PICGO_API_KEY: str = ""
-    PICGO_API_URL: str = "https://www.picgo.net/api/1/upload"
     CLOUDFLARE_IMGBED_URL: str = ""
     CLOUDFLARE_IMGBED_AUTH_CODE: str = ""
     CLOUDFLARE_IMGBED_UPLOAD_FOLDER: str = ""
@@ -131,6 +130,20 @@ class Settings(BaseSettings):
     FILES_CLEANUP_ENABLED: bool = True
     FILES_CLEANUP_INTERVAL_HOURS: int = 1
     FILES_USER_ISOLATION_ENABLED: bool = True
+
+    # LLM Router Configuration
+    LLM_ROUTER_MODEL: str = "gemini-1.5-flash-latest"
+    LLM_ROUTER_DEFAULT_WORKER: str = "gemini-1.5-pro-latest"
+    LLM_ROUTER_CONFIG: List[Dict[str, Any]] = Field(default_factory=list)
+
+    @field_validator('LLM_ROUTER_CONFIG', mode='before')
+    def parse_router_config(cls, v):
+        if isinstance(v, str) and v:
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                raise ValueError("LLM_ROUTER_CONFIG must be a valid JSON string")
+        return v or []
 
     # Admin Session Configuration
     ADMIN_SESSION_EXPIRE: int = Field(
