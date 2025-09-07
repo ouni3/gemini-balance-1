@@ -16,7 +16,7 @@ from app.service.openai_compatiable.openai_compatiable_service import OpenAIComp
 from app.utils.helpers import redact_key_for_logging
 
 
-router = APIRouter()
+router = APIRouter(prefix="/openai/v1")
 logger = get_openai_compatible_logger()
 
 security_service = SecurityService()
@@ -36,7 +36,7 @@ async def get_openai_service(key_manager: KeyManager = Depends(get_key_manager))
     return OpenAICompatiableService(settings.BASE_URL, key_manager)
 
 
-@router.get("/openai/v1/models")
+@router.get("/models")
 async def list_models(
     _=Depends(security_service.verify_authorization),
     key_manager: KeyManager = Depends(get_key_manager),
@@ -51,7 +51,7 @@ async def list_models(
         return await openai_service.get_models(api_key)
 
 
-@router.post("/openai/v1/chat/completions")
+@router.post("/chat/completions")
 @RetryHandler(key_arg="api_key")
 async def chat_completion(
     request: ChatRequest,
@@ -95,13 +95,15 @@ async def generate_image(
         request.model = settings.CREATE_IMAGE_MODEL
         return await openai_service.generate_images(request)
 
-
-@router.post("/openai/v1/embeddings")
+from app.service.embedding.embedding_service import EmbeddingService
+# 实例化正确的服务
+embedding_service = EmbeddingService()
+@router.post("/embeddings")
 async def embedding(
     request: EmbeddingRequest,
     _=Depends(security_service.verify_authorization),
     key_manager: KeyManager = Depends(get_key_manager),
-    openai_service: OpenAICompatiableService = Depends(get_openai_service),
+    # 注意：这里不再需要 openai_service，我们直接使用 embedding_service
 ):
     """处理文本嵌入请求。"""
     operation_name = "embedding"
@@ -109,6 +111,12 @@ async def embedding(
         logger.info(f"Handling embedding request for model: {request.model}")
         api_key = await key_manager.get_next_working_key()
         logger.info(f"Using API key: {redact_key_for_logging(api_key)}")
-        return await openai_service.create_embeddings(
-            input_text=request.input, model=request.model, api_key=api_key
+        
+        # --- 核心修改：调用正确的服务和方法 ---
+        return await embedding_service.create_embedding(
+            input_text=request.input, 
+            model=request.model, 
+            api_key=api_key,
+            dimensions=request.dimensions # <--- 传递 dimensions 参数
         )
+        

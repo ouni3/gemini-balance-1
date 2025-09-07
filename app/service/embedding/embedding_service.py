@@ -1,7 +1,7 @@
 import datetime
 import re
 import time
-from typing import List, Union
+from typing import List, Union, Optional
 
 import openai
 from openai import APIStatusError
@@ -17,7 +17,7 @@ logger = get_embeddings_logger()
 class EmbeddingService:
 
     async def create_embedding(
-        self, input_text: Union[str, List[str]], model: str, api_key: str
+        self, input_text: Union[str, List[str]], model: str, api_key: str, dimensions: Optional[int] = None # <--- 新增 dimensions 参数
     ) -> CreateEmbeddingResponse:
         """Create embeddings using OpenAI API with database logging"""
         start_time = time.perf_counter()
@@ -44,7 +44,17 @@ class EmbeddingService:
 
         try:
             client = openai.OpenAI(api_key=api_key, base_url=settings.BASE_URL)
-            response = client.embeddings.create(input=input_text, model=model)
+            
+            # 准备传递给 OpenAI 库的参数
+            embedding_params = {
+                "input": input_text,
+                "model": model
+            }
+            if dimensions:
+                embedding_params["dimensions"] = dimensions # <--- 如果提供了 dimensions，则添加到参数中
+            
+            response = client.embeddings.create(**embedding_params) # <--- 使用解包方式传递参数
+            
             is_success = True
             status_code = 200
             return response

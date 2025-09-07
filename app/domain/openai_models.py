@@ -24,6 +24,7 @@ class EmbeddingRequest(BaseModel):
     input: Union[str, List[str]]
     model: str = "text-embedding-004"
     encoding_format: Optional[str] = "float"
+    dimensions: Optional[int] = None # <--- 新增此行
 
 
 class ImageGenerationRequest(BaseModel):
